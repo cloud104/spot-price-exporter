@@ -1,5 +1,9 @@
 ## AWS Spot price exporter
 
+This is a forked version. 
+
+Deps was updated and images has updated too.
+
 Prometheus exporter for AWS spot prices.
 The exporter is fetching the current spot price from the AWS API on every scrape from the Prometheus server.
 Price info is queried in every available region for every available instance type and exposed via an HTTP metrics endpoint.
@@ -10,10 +14,6 @@ Building the project is as simple as running a go build command. The result is a
 ```
 make build
 ```
-
-#### Docker
-
-An auto-built image is available at https://hub.docker.com/r/banzaicloud/spot-price-exporter/
 
 ```
 docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY banzaicloud/spot-price-exporter
