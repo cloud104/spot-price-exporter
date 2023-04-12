@@ -16,7 +16,7 @@ make build
 ```
 
 ```
-docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY banzaicloud/spot-price-exporter
+docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY cloud104/spot-price-exporter
 ```
 
 ### Run as dev

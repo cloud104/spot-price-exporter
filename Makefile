@@ -1,5 +1,5 @@
 EXECUTABLE ?= spot-price-exporter
-IMAGE ?= banzaicloud/$(EXECUTABLE)
+IMAGE ?= cloud104/$(EXECUTABLE)
 TAG ?= dev-$(shell git log -1 --pretty=format:"%h")
 
 LD_FLAGS = -X "main.version=$(TAG)"
