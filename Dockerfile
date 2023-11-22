@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine as backend
+FROM golang:1.21-alpine as backend
 RUN apk update && apk add ca-certificates curl git make tzdata
 
 RUN mkdir -p /go/src/github.com/banzaicloud/spot-price-exporter
