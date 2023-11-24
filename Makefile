@@ -1,6 +1,7 @@
 EXECUTABLE ?= spot-price-exporter
 IMAGE ?= cloud104/$(EXECUTABLE)
 TAG ?= dev-$(shell git log -1 --pretty=format:"%h")
+REGISTRY = us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter
 
 LD_FLAGS = -X "main.version=$(TAG)"
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
@@ -51,7 +52,9 @@ vet:
 	@go vet -composites=false ./...
 
 docker:
-	docker build --rm -t $(IMAGE):$(TAG) .
+	@echo "Building container image"
+	docker buildx create
+	docker buildx build --push --platform linux/amd64 --platform linux/arm64 -t $(REGISTRY)/$(EXECUTABLE):${TAG} .
 
 push:
 	docker push $(IMAGE):$(TAG)
@@ -99,4 +102,3 @@ ineffassign: install-ineffassign
 
 gocyclo: install-gocyclo
 	gocyclo -over 19 ${GOFILES_NOVENDOR}
-
