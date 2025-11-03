@@ -1,14 +1,35 @@
-# cloudbuild.yaml - Multi-platform buildx template for "spot-price-calculator"
+# cloudbuild.yaml - multi-arch build & push using docker buildx
 substitutions:
-  _TAG_NAME: "latest"  # override with --substitutions=_TAG_NAME=your-tag when triggering
+  _TAG_NAME: "latest"
 
 steps:
+  # enable binfmt for cross-platform emulation
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA', '.']
+    args: ['run', '--rm', '--privileged', 'tonistiigi/binfmt:latest', '--install', 'all']
+
+  # create and use a buildx builder
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker buildx create --use --name cbuilder || docker buildx use cbuilder
+
+  # buildx multi-platform build and push
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'buildx'
+      - 'build'
+      - '--platform'
+      - 'linux/amd64,linux/arm64'
+      - '--push'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
+      - '.'
+
 images:
   - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
+
 options:
   machineType: 'E2_HIGHCPU_8'
 timeout: '1200s'

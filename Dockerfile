@@ -4,13 +4,21 @@ RUN apk update && apk add --no-cache ca-certificates git make tzdata
 
 WORKDIR /src
 
+# permitir que buildx injete TARGETOS/TARGETARCH (default amd64)
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+
+# usar variáveis para compilação multiplataforma
+ENV CGO_ENABLED=0 \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH}
+
 # aproveitar cache de dependências
 COPY go.mod go.sum ./
 RUN go mod download
 
 # copiar código e compilar
 COPY . .
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN go build -ldflags="-s -w" -o /bin/spot-price-exporter .
 
 # Stage final mínimo
