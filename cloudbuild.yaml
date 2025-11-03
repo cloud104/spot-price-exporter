@@ -1,0 +1,29 @@
+# cloudbuild.yaml - Multi-platform buildx template for "spot-price-calculator"
+substitutions:
+  _TAG_NAME: "latest"  # override with --substitutions=_TAG_NAME=your-tag when triggering
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'initialize-qemu'
+  args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'create-and-use-builder'
+  args: ['buildx', 'create', '--name', 'mybuilder', '--use']
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'inspect-builder'
+  args: ['buildx', 'inspect', '--bootstrap']
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'build-and-push'
+  args:
+    [
+      'buildx', 'build', '--push',
+      '--platform', 'linux/amd64,linux/arm64',
+      '-t', 'gcr.io/$PROJECT_ID/spot-price-calculator:${_TAG_NAME}',
+      '.'
+    ]
+
+images:
+  - 'gcr.io/$PROJECT_ID/spot-price-calculator:${_TAG_NAME}'
