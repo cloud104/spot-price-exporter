@@ -8,7 +8,6 @@ steps:
   args:
     [
       'buildx', 'build', '--push',
-      '--platform', 'linux/amd64,linux/arm64',
       '-t', 'gcr.io/$PROJECT_ID/spot-price-calculator:${_TAG_NAME}',
       '.'
     ]
