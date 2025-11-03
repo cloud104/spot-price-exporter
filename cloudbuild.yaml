@@ -3,14 +3,12 @@ substitutions:
   _TAG_NAME: "latest"  # override with --substitutions=_TAG_NAME=your-tag when triggering
 
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  id: 'build-and-push'
-  args:
-    [
-      'buildx', 'build', '--push',
-      '-t', 'gcr.io/$PROJECT_ID/spot-price-calculator:${_TAG_NAME}',
-      '.'
-    ]
-
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA']
 images:
-  - 'gcr.io/$PROJECT_ID/spot-price-calculator:${_TAG_NAME}'
+  - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
+options:
+  machineType: 'E2_HIGHCPU_8'
+timeout: '1200s'

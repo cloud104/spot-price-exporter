@@ -1,12 +1,20 @@
-FROM golang:1.21-alpine as backend
-RUN apk update && apk add ca-certificates curl git make tzdata
+# Stage de build
+FROM golang:1.25-alpine AS backend
+RUN apk update && apk add --no-cache ca-certificates git make tzdata
 
-RUN mkdir -p /go/src/github.com/banzaicloud/spot-price-exporter
-WORKDIR /go/src/github.com/banzaicloud/spot-price-exporter
-ADD . /go/src/github.com/banzaicloud/spot-price-exporter
-RUN go build -o /bin/spot-price-exporter .
+WORKDIR /src
 
+# aproveitar cache de dependências
+COPY go.mod go.sum ./
+RUN go mod download
+
+# copiar código e compilar
+COPY . .
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+RUN go build -ldflags="-s -w" -o /bin/spot-price-exporter .
+
+# Stage final mínimo
 FROM alpine:3
-COPY --from=backend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=0 /bin/spot-price-exporter /bin
+RUN apk add --no-cache ca-certificates
+COPY --from=backend /bin/spot-price-exporter /bin/spot-price-exporter
 ENTRYPOINT ["/bin/spot-price-exporter"]
