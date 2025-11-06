@@ -31,6 +31,15 @@ steps:
       - '--sbom=false'
       - '.'
 
+  # Verificar e validar as imagens após o push
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA
+        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:latest
+
 images:
   - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
   - 'gcr.io/$PROJECT_ID/spot-price-exporter:latest'
@@ -39,4 +48,3 @@ options:
   machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
 timeout: '1200s'
-#teste
