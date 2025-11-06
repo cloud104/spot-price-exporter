@@ -29,16 +29,9 @@ steps:
       - 'gcr.io/$PROJECT_ID/spot-price-exporter:latest'
       - '--provenance=false'
       - '--sbom=false'
+      - '--compression=zstd'
+      - '--output=type=registry,compression-level=3'
       - '.'
-
-  # Verificar e validar as imagens após o push
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA
-        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:latest
 
 images:
   - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
