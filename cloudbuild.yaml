@@ -29,8 +29,6 @@ steps:
       - 'gcr.io/$PROJECT_ID/spot-price-exporter:latest'
       - '--provenance=false'
       - '--sbom=false'
-      - '--compression=zstd'
-      - '--output=type=registry,compression-level=3'
       - '.'
 
 images:
