@@ -1,6 +1,7 @@
 # cloudbuild.yaml - multi-arch build & push using docker buildx
 substitutions:
   _TAG_NAME: "latest"
+  _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
 
 steps:
   # enable binfmt for cross-platform emulation
@@ -15,7 +16,7 @@ steps:
       - |
         docker buildx create --use --name cbuilder || docker buildx use cbuilder
 
-  # buildx multi-platform build and push
+  # buildx multi-platform build and push to Artifact Registry repo ($_REPO)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'buildx'
@@ -24,25 +25,25 @@ steps:
       - 'linux/amd64,linux/arm64'
       - '--push'
       - '--tag'
-      - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
+      - '$_REPO:$SHORT_SHA'
       - '--tag'
-      - 'gcr.io/$PROJECT_ID/spot-price-exporter:latest'
+      - '$_REPO:$_TAG_NAME'
       - '--provenance=false'
       - '--sbom=false'
       - '.'
 
-  # Verificar e validar as imagens após o push
+  # Verificar e validar as imagens após o push (opcional)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA
-        docker pull gcr.io/$PROJECT_ID/spot-price-exporter:latest
+        docker pull $_REPO:$SHORT_SHA
+        docker pull $_REPO:$_TAG_NAME
 
 images:
-  - 'gcr.io/$PROJECT_ID/spot-price-exporter:$SHORT_SHA'
-  - 'gcr.io/$PROJECT_ID/spot-price-exporter:latest'
+  - '$_REPO:$SHORT_SHA'
+  - '$_REPO:$_TAG_NAME'
 
 options:
   machineType: 'E2_HIGHCPU_8'
