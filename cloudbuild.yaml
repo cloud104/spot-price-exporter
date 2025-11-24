@@ -1,4 +1,4 @@
-# cloudbuild.yaml - Multi-arch build & push for Go binary (Dockerfile-based)
+# cloudbuild.yaml - Simplified multi-arch build & push for Go binary
 
 substitutions:
   _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
@@ -7,49 +7,35 @@ substitutions:
 steps:
   # 1. Enable binfmt for cross-platform emulation
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['run', '--rm', '--privileged', 'tonistiigi/binfmt:latest', '--install', 'all']
+    args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
+    id: 'initialize-qemu'
 
   # 2. Create and use a buildx builder
   - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        docker buildx create --use --name cbuilder || docker buildx use cbuilder
+    args: ['buildx', 'create', '--name', 'mybuilder']
+    id: 'create-builder'
 
-  # 3. Single multi-platform build & push -> produces a multi-arch manifest for the tags
   - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        docker buildx build \
-          --platform=linux/amd64,linux/arm64 \
-          --push \
-          --tag=$_REPO:$SHORT_SHA \
-          --tag=$_REPO:$_TAG_NAME \
-          --provenance=false \
-          --sbom=false \
-          .
+    args: ['buildx', 'use', 'mybuilder']
+    id: 'select-builder'
 
-  # 4. Optional: inspect manifest and list pushed images
+  # 3. Inspect the builder to show target platforms
   - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "Inspecting manifest for short sha:"
-        docker buildx imagetools inspect $_REPO:$SHORT_SHA || true
-        echo "Inspecting manifest for tag latest:"
-        docker buildx imagetools inspect $_REPO:$_TAG_NAME || true
+    args: ['buildx', 'inspect', '--bootstrap']
+    id: 'show-target-build-platforms'
 
-  - name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
+  # 4. Build and push the multi-arch image
+  - name: 'gcr.io/cloud-builders/docker'
     args:
-      - '-c'
-      - |
-        echo "Artifact Registry images:"
-        gcloud artifacts docker images list ${_REPO%/*} --location=us-east1 || true
+      - 'buildx'
+      - 'build'
+      - '--push'
+      - '--platform'
+      - 'linux/amd64,linux/arm64'
+      - '-t'
+      - '$_REPO:$_TAG_NAME'
+      - '.'
+    id: 'build'
 
 # no images: section to avoid Cloud Build final-image existence check
 options:
