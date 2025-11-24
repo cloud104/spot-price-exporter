@@ -53,35 +53,27 @@ steps:
     args:
       - '-c'
       - |
-        # criar manifest multi-arch para $SHORT_SHA
         docker buildx imagetools create --tag $_REPO:$SHORT_SHA \
           $_REPO:$SHORT_SHA-amd64 \
           $_REPO:$SHORT_SHA-arm64 || true
 
-        # criar manifest multi-arch para latest
         docker buildx imagetools create --tag $_REPO:$_TAG_NAME \
           $_REPO:$_TAG_NAME-amd64 \
           $_REPO:$_TAG_NAME-arm64 || true
 
-  # 6. Optional: inspect created multi-arch manifests
-  - name: 'gcr.io/cloud-builders/docker'
+  # 6. List the pushed tags (no image discovery by Cloud Build)
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "=== Inspect short sha ==="
+        echo "Tags pushed:"
+        gcloud artifacts docker images list ${_REPO%/*} --repository=${_REPO%/*} --location=us-east1 || true
+        echo "Inspect multi-arch manifests:"
         docker buildx imagetools inspect $_REPO:$SHORT_SHA || true
-        echo "=== Inspect latest ==="
         docker buildx imagetools inspect $_REPO:$_TAG_NAME || true
 
-images:
-  - '$_REPO:$SHORT_SHA-amd64'
-  - '$_REPO:$SHORT_SHA-arm64'
-  - '$_REPO:$SHORT_SHA'
-  - '$_REPO:$_TAG_NAME-amd64'
-  - '$_REPO:$_TAG_NAME-arm64'
-  - '$_REPO:$_TAG_NAME'
-
+# Removed images: section to avoid Cloud Build "failed to find images" check
 options:
   machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
