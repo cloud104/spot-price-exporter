@@ -39,6 +39,6 @@ steps:
 
 # no images: section to avoid Cloud Build final-image existence check
 options:
-  machineType: 'E2_HIGHCPU_8'
+  machineType: 'E2_HIGHCPU_8'  # ou 'E2_HIGHCPU_16' para mais recursos
   logging: CLOUD_LOGGING_ONLY
-timeout: '1200s'
+timeout: '1800s'  # Aumentado para 30 minutos
