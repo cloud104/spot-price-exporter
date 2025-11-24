@@ -1,15 +1,15 @@
-# cloudbuild.yaml - multi-arch build & push using docker buildx
+# cloudbuild.yaml - multi-arch unified build & push using buildx
 
 substitutions:
   _TAG_NAME: "latest"
   _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
 
 steps:
-  # 1️⃣ Habilita suporte a buildx e emulação multi-arch
+  # 1. Enable binfmt for cross-platform emulation
   - name: 'gcr.io/cloud-builders/docker'
     args: ['run', '--rm', '--privileged', 'tonistiigi/binfmt:latest', '--install', 'all']
 
-  # 2️⃣ Cria o builder buildx
+  # 2. Create and use a buildx builder
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -17,60 +17,31 @@ steps:
       - |
         docker buildx create --use --name cbuilder || docker buildx use cbuilder
 
-  # 3️⃣ Build e push da imagem amd64
+  # 3. Multi-arch build (single manifest)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'buildx'
       - 'build'
-      - '--platform=linux/amd64'
+      - '--platform'
+      - 'linux/amd64,linux/arm64'
       - '--push'
-      - '--tag=$_REPO:${SHORT_SHA}-linux-amd64'
-      - '--tag=$_REPO:${_TAG_NAME}-linux-amd64'
+      - '--tag'
+      - '$_REPO:$SHORT_SHA'
+      - '--tag'
+      - '$_REPO:${_TAG_NAME}'
+      - '--tag'
+      - '$_REPO:${SHORT_SHA}-multiarch'
+      - '--tag'
+      - '$_REPO:${_TAG_NAME}-multiarch'
       - '--provenance=false'
       - '--sbom=false'
       - '.'
-
-  # 4️⃣ Build e push da imagem arm64
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'buildx'
-      - 'build'
-      - '--platform=linux/arm64'
-      - '--push'
-      - '--tag=$_REPO:${SHORT_SHA}-linux-arm64'
-      - '--tag=$_REPO:${_TAG_NAME}-linux-arm64'
-      - '--provenance=false'
-      - '--sbom=false'
-      - '.'
-
-  # 5️⃣ Cria manifest multi-arch unificando as duas imagens anteriores
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        docker buildx imagetools create \
-          -t $_REPO:${SHORT_SHA} \
-          -t $_REPO:${_TAG_NAME} \
-          $_REPO:${SHORT_SHA}-linux-amd64 \
-          $_REPO:${SHORT_SHA}-linux-arm64
-
-  # 6️⃣ (opcional) Verificação das imagens geradas
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "=== Verificando imagens publicadas ==="
-        docker buildx imagetools inspect $_REPO:${SHORT_SHA}
 
 images:
-  - '$_REPO:${SHORT_SHA}'
+  - '$_REPO:$SHORT_SHA'
   - '$_REPO:${_TAG_NAME}'
-  - '$_REPO:${SHORT_SHA}-linux-amd64'
-  - '$_REPO:${SHORT_SHA}-linux-arm64'
-  - '$_REPO:${_TAG_NAME}-linux-amd64'
-  - '$_REPO:${_TAG_NAME}-linux-arm64'
+  - '$_REPO:${SHORT_SHA}-multiarch'
+  - '$_REPO:${_TAG_NAME}-multiarch'
 
 options:
   machineType: 'E2_HIGHCPU_8'
