@@ -1,14 +1,15 @@
-# cloudbuild.yaml - multi-arch build & push using docker buildx
+# cloudbuild.yaml - multi-arch build & push with arch-specific tags
+
 substitutions:
   _TAG_NAME: "latest"
   _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
 
 steps:
-  # enable binfmt for cross-platform emulation
+  # 1. Enable binfmt for cross-platform emulation
   - name: 'gcr.io/cloud-builders/docker'
     args: ['run', '--rm', '--privileged', 'tonistiigi/binfmt:latest', '--install', 'all']
 
-  # create and use a buildx builder
+  # 2. Create and use a buildx builder
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -16,32 +17,47 @@ steps:
       - |
         docker buildx create --use --name cbuilder || docker buildx use cbuilder
 
-  # buildx multi-platform build and push to Artifact Registry repo ($_REPO)
+  # 3. Build and push linux/amd64
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'buildx'
       - 'build'
-      - '--platform'
-      - 'linux/amd64,linux/arm64'
+      - '--platform=linux/amd64'
       - '--push'
-      - '--tag'
-      - '$_REPO:$SHORT_SHA'
-      - '--tag'
-      - '$_REPO:$_TAG_NAME'
+      - '--tag=$_REPO:${SHORT_SHA}-amd64'
+      - '--tag=$_REPO:${_TAG_NAME}-amd64'
       - '--provenance=false'
       - '--sbom=false'
       - '.'
 
-  # Verificar e validar as imagens após o push (opcional)
+  # 4. Build and push linux/arm64
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'buildx'
+      - 'build'
+      - '--platform=linux/arm64'
+      - '--push'
+      - '--tag=$_REPO:${SHORT_SHA}-arm64'
+      - '--tag=$_REPO:${_TAG_NAME}-arm64'
+      - '--provenance=false'
+      - '--sbom=false'
+      - '.'
+
+  # 5. Create a multi-arch manifest combining both images
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        docker pull $_REPO:$SHORT_SHA
-        docker pull $_REPO:$_TAG_NAME
+        docker buildx imagetools create \
+          -t $_REPO:$SHORT_SHA \
+          -t $_REPO:$_TAG_NAME \
+          $_REPO:${SHORT_SHA}-amd64 \
+          $_REPO:${SHORT_SHA}-arm64
 
 images:
+  - '$_REPO:${SHORT_SHA}-amd64'
+  - '$_REPO:${SHORT_SHA}-arm64'
   - '$_REPO:$SHORT_SHA'
   - '$_REPO:$_TAG_NAME'
 
