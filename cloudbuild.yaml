@@ -17,63 +17,41 @@ steps:
       - |
         docker buildx create --use --name cbuilder || docker buildx use cbuilder
 
-  # 3. Build and push amd64 image with arch tag
+  # 3. Single multi-platform build & push -> produces a multi-arch manifest for the tags
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         docker buildx build \
-          --platform=linux/amd64 \
+          --platform=linux/amd64,linux/arm64 \
           --push \
-          --tag=$_REPO:$SHORT_SHA-amd64 \
-          --tag=$_REPO:$_TAG_NAME-amd64 \
+          --tag=$_REPO:$SHORT_SHA \
+          --tag=$_REPO:$_TAG_NAME \
           --provenance=false \
           --sbom=false \
           .
 
-  # 4. Build and push arm64 image with arch tag
+  # 4. Optional: inspect manifest and list pushed images
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        docker buildx build \
-          --platform=linux/arm64 \
-          --push \
-          --tag=$_REPO:$SHORT_SHA-arm64 \
-          --tag=$_REPO:$_TAG_NAME-arm64 \
-          --provenance=false \
-          --sbom=false \
-          .
+        echo "Inspecting manifest for short sha:"
+        docker buildx imagetools inspect $_REPO:$SHORT_SHA || true
+        echo "Inspecting manifest for tag latest:"
+        docker buildx imagetools inspect $_REPO:$_TAG_NAME || true
 
-  # 5. Create multi-arch manifest tags pointing to per-arch images
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        docker buildx imagetools create --tag $_REPO:$SHORT_SHA \
-          $_REPO:$SHORT_SHA-amd64 \
-          $_REPO:$SHORT_SHA-arm64 || true
-
-        docker buildx imagetools create --tag $_REPO:$_TAG_NAME \
-          $_REPO:$_TAG_NAME-amd64 \
-          $_REPO:$_TAG_NAME-arm64 || true
-
-  # 6. List the pushed tags (no image discovery by Cloud Build)
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        echo "Tags pushed:"
-        gcloud artifacts docker images list ${_REPO%/*} --repository=${_REPO%/*} --location=us-east1 || true
-        echo "Inspect multi-arch manifests:"
-        docker buildx imagetools inspect $_REPO:$SHORT_SHA || true
-        docker buildx imagetools inspect $_REPO:$_TAG_NAME || true
+        echo "Artifact Registry images:"
+        gcloud artifacts docker images list ${_REPO%/*} --location=us-east1 || true
 
-# Removed images: section to avoid Cloud Build "failed to find images" check
+# no images: section to avoid Cloud Build final-image existence check
 options:
   machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
