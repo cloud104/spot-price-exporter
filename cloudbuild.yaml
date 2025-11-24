@@ -1,11 +1,11 @@
-# cloudbuild.yaml - multi-arch unified build & push using buildx
+# cloudbuild.yaml - Multi-arch build & push for Go binary (Dockerfile-based)
 
 substitutions:
-  _TAG_NAME: "latest"
   _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
+  _TAG_NAME: "latest"
 
 steps:
-  # 1. Enable binfmt for cross-platform emulation
+  # 1. Enable binfmt for cross-platform emulation (necessário para build multi-arch)
   - name: 'gcr.io/cloud-builders/docker'
     args: ['run', '--rm', '--privileged', 'tonistiigi/binfmt:latest', '--install', 'all']
 
@@ -17,29 +17,33 @@ steps:
       - |
         docker buildx create --use --name cbuilder || docker buildx use cbuilder
 
-  # 3. Multi-arch build (single manifest)
+  # 3. Build multi-arch image and push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'buildx'
       - 'build'
-      - '--platform'
-      - 'linux/amd64,linux/arm64'
+      - '--platform=linux/amd64,linux/arm64'
       - '--push'
-      - '--tag'
-      - '$_REPO:$SHORT_SHA'
-      - '--tag'
-      - '$_REPO:${_TAG_NAME}'
-      - '--tag'
-      - '$_REPO:${SHORT_SHA}-multiarch'
-      - '--tag'
-      - '$_REPO:${_TAG_NAME}-multiarch'
+      - '--tag=$_REPO:$SHORT_SHA'
+      - '--tag=$_REPO:$_TAG_NAME'
+      - '--tag=$_REPO:${SHORT_SHA}-multiarch'
+      - '--tag=$_REPO:${_TAG_NAME}-multiarch'
       - '--provenance=false'
       - '--sbom=false'
       - '.'
 
+  # 4. Inspect manifest (opcional, útil pra validar as arquiteturas)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "=== Multi-arch manifest info ==="
+        docker buildx imagetools inspect $_REPO:$SHORT_SHA || true
+
 images:
   - '$_REPO:$SHORT_SHA'
-  - '$_REPO:${_TAG_NAME}'
+  - '$_REPO:$_TAG_NAME'
   - '$_REPO:${SHORT_SHA}-multiarch'
   - '$_REPO:${_TAG_NAME}-multiarch'
 
