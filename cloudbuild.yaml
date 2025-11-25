@@ -1,16 +1,11 @@
-# cloudbuild.yaml - Simplified multi-arch build & push for Go binary
+# cloudbuild.yaml - Simplified single-arch build & push for Go binary (amd64 only)
 
 substitutions:
   _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
   _TAG_NAME: "latest"
 
 steps:
-  # 1. Enable binfmt for cross-platform emulation
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['run', '--privileged', 'linuxkit/binfmt:v0.7']
-    id: 'initialize-qemu'
-
-  # 2. Create and use a buildx builder
+  # 1. Create and use a buildx builder
   - name: 'gcr.io/cloud-builders/docker'
     args: ['buildx', 'create', '--name', 'mybuilder']
     id: 'create-builder'
@@ -19,26 +14,22 @@ steps:
     args: ['buildx', 'use', 'mybuilder']
     id: 'select-builder'
 
-  # 3. Inspect the builder to show target platforms
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['buildx', 'inspect', '--bootstrap']
-    id: 'show-target-build-platforms'
-
-  # 4. Build and push the multi-arch image
+  # 2. Build and push the amd64 image only
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'buildx'
       - 'build'
       - '--push'
       - '--platform'
-      - 'linux/amd64,linux/arm64'
+      - 'linux/amd64'
       - '-t'
       - '$_REPO:$_TAG_NAME'
+      - '-t'
+      - '$_REPO:$SHORT_SHA'
       - '.'
     id: 'build'
 
-# no images: section to avoid Cloud Build final-image existence check
 options:
-  machineType: 'E2_HIGHCPU_8'  # ou 'E2_HIGHCPU_16' para mais recursos
+  machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
-timeout: '1800s'  # Aumentado para 30 minutos
+timeout: '900s'
