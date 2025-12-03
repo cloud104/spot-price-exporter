@@ -54,7 +54,7 @@ vet:
 docker:
 	@echo "Building container image"
 	docker buildx create
-	docker buildx build --push --platform linux/amd64 --platform linux/arm64 -t $(REGISTRY)/$(EXECUTABLE):${TAG} .
+	docker buildx build --push --platform linux/amd64,linux/arm64 -t $(REGISTRY)/$(EXECUTABLE):${TAG} .
 
 push:
 	docker push $(IMAGE):$(TAG)

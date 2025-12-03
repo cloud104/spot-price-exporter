@@ -1,0 +1,36 @@
+# cloudbuild.yaml - Simplified single-arch build & push for Go binary (amd64 only)
+
+substitutions:
+  _REPO: "us-east1-docker.pkg.dev/tks-gcr-pub/spot-price-exporter/spot-price-exporter"
+  _TAG_NAME: "latest"
+
+steps:
+  # 1. Create and use a buildx builder
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'create', '--name', 'mybuilder']
+    id: 'create-builder'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['buildx', 'use', 'mybuilder']
+    id: 'select-builder'
+
+  # 2. Build and push the amd64 image only
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'buildx'
+      - 'build'
+      - '--push'
+      - '--platform'
+      - 'linux/amd64'
+      - '-t'
+      - '$_REPO:$_TAG_NAME'
+      - '-t'
+      - '$_REPO:$SHORT_SHA'
+      - '.'
+    id: 'build'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+timeout: '900s'
+
